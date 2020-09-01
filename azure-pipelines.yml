@@ -1,0 +1,64 @@
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-18.04'
+
+variables:
+  tag: '$(Build.BuildId)'
+  PREFIX_NAME: morph
+  GOPATH: '$(Agent.BuildDirectory)/gopath' # Go workspace path
+  GOROOT: '$(Agent.BuildDirectory)/go' # Go installation path
+  GOBIN:  '$(GOPATH)/bin' # Go binaries path
+  modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
+
+steps:
+- script: |
+    wget "https://dl.google.com/go/go1.15.linux-amd64.tar.gz" --output-document "$(Agent.BuildDirectory)/go1.15.linux-amd64.tar.gz"
+    tar -C '$(Agent.BuildDirectory)' -xzf "$(Agent.BuildDirectory)/go1.15.linux-amd64.tar.gz"
+  displayName: 'Install Go 1.15'
+
+- script: |
+    mkdir -p '$(GOBIN)'
+    mkdir -p '$(GOPATH)/pkg'
+    mkdir -p '$(modulePath)'
+    shopt -s extglob
+    shopt -s dotglob
+    mv !(gopath) '$(modulePath)'
+    echo '##vso[task.prependpath]$(GOBIN)'
+    echo '##vso[task.prependpath]$(GOROOT)/bin'
+  displayName: 'Set up the Go workspace'
+
+- script: |
+    go version
+    go get -v -t -d ./...
+    if [ -f Gopkg.toml ]; then
+        curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+        dep ensure
+    fi
+  workingDirectory: '$(modulePath)'
+  displayName: 'Get dependencies'
+
+- script: |
+    cp README.md $(Build.ArtifactStagingDirectory)
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -installsuffix cgo -v -ldflags '-w -s' -tags json -o $(Build.ArtifactStagingDirectory)/$(PREFIX_NAME)-json
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -installsuffix cgo -v -ldflags '-w -s' -tags aws -o $(Build.ArtifactStagingDirectory)/$(PREFIX_NAME)-aws
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -installsuffix cgo -v -ldflags '-w -s' -tags azure -o $(Build.ArtifactStagingDirectory)/$(PREFIX_NAME)-azure
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -installsuffix cgo -v -ldflags '-w -s' -tags gcp -o $(Build.ArtifactStagingDirectory)/$(PREFIX_NAME)-gcp
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -installsuffix cgo -v -ldflags '-w -s' -tags mssql -o $(Build.ArtifactStagingDirectory)/$(PREFIX_NAME)-mssql
+    CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -installsuffix cgo -v -ldflags '-w -s' -tags json -o $(Build.ArtifactStagingDirectory)/$(PREFIX_NAME)-json.exe
+    CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -installsuffix cgo -v -ldflags '-w -s' -tags aws -o $(Build.ArtifactStagingDirectory)/$(PREFIX_NAME)-aws.exe
+    CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -installsuffix cgo -v -ldflags '-w -s' -tags azure -o $(Build.ArtifactStagingDirectory)/$(PREFIX_NAME)-azure.exe
+    CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -installsuffix cgo -v -ldflags '-w -s' -tags gcp -o $(Build.ArtifactStagingDirectory)/$(PREFIX_NAME)-gcp.exe
+    CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -installsuffix cgo -v -ldflags '-w -s' -tags mssql -o $(Build.ArtifactStagingDirectory)/$(PREFIX_NAME)-mssql.exe
+  workingDirectory: '$(modulePath)'
+  displayName: 'Build binaries'
+
+- task: GithubRelease@0
+  displayName: 'Create GitHub Release'
+  inputs:
+    gitHubConnection: github.com_davidbetz
+    repositoryName: davidbetz/morph
+    tagSource: manual
+    tag: $(tag)     
+    assets: $(Build.ArtifactStagingDirectory)/*
