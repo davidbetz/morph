@@ -72,7 +72,8 @@ func (t *Gnt) getPartName(part string) string {
 	case "X-":
 		return "particle"
 	default:
-		panic("invalid part " + part)
+		errorf("invalid part " + part)
+		return ""
 	}
 }
 
@@ -226,7 +227,7 @@ func (t *Gnt) setupTables() {
 func (t *Gnt) createAbsoluteID(verse string, id int) int64 {
 	newID, err := strconv.ParseInt(verse+strconv.Itoa(id), 10, 32)
 	if err != nil {
-		panic(err)
+		errorf(err.Error())
 	}
 	return newID
 }

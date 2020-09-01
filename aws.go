@@ -19,7 +19,7 @@ func getPartitionSize() int {
 func createSession() (*session.Session, error) {
 	session, err := session.NewSession()
 	if err != nil {
-		panic(err)
+		errorf(err.Error())
 	}
 	return session, err
 }

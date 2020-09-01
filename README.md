@@ -32,40 +32,9 @@ Windows is also supported:
 
 Day to day, I install nothing. It's just Docker. When doing cloud-first, I use ephemeral VMs.
 
-Just run `https://raw.githubusercontent.com/davidbetz/morph/master/vm-setup.sh`.
+Run something at the following location:
 
-Done. That's your development environment. Kill and rebuild as needed.
-
-Want a one-liner for the VM?
-
-### GCP
-
-    gcloud compute instances create morphgnt \
-        --zone=us-central1-a \
-        --metadata=startup-script-url=https://raw.githubusercontent.com/davidbetz/morph/master/vm-setup.sh
-
-### AWS
-
-    aws ec2 run-instances \
-        --instance-type t2.micro \
-        --image-id resolve:ssm:/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2 \
-        --key-name `aws ec2 describe-key-pairs --query 'KeyPairs[0].[KeyName]' --output text` \
-        --user-data `curl -s https://raw.githubusercontent.com/davidbetz/morph/master/vm-setup.sh | base64 -w0` \
-        --output text
-
-### Azure
-
-    az group create --location centralus -n centralus
-    az vm create \
-        --resource-group morphgnt \
-        --name morphgnt \
-        --location centralus \
-        --size Standard_B1ms \
-        --image OpenLogic:CentOS:7.5:7.5.201808150 \
-        --admin-username admin \
-        --ssh-key-values @~/.ssh/id_rsa.pub \
-
-Because the Azure documentation is trash and because nobody on the Github issues is helpful, getting a startup-script to work on an Azure VM barely works. Just run the script manually.
+[https://startup.netfxharmonics.com/scripts/golang/](https://startup.netfxharmonics.com/scripts/golang/)
 
 ### MSSQL
 
@@ -77,7 +46,7 @@ Use [https://passwordsgenerator.net/](https://passwordsgenerator.net/) to genera
 
 Of course, any cloud offering of Microsoft SQL (e.g. Azure SQL, AWS RDS) would work too.
 
-# Infrastructure Setup
+# Cloud Data Setup
 
 Never create infrastructure in your application. Separate it. If your application has permissions to create resources, it has far too many permissions. It's such a poor practice that I won't even do it in a sample application.
 

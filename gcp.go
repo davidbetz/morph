@@ -28,9 +28,9 @@ func getPartitionSize() int {
 }
 
 func validateCloudConfig() error {
-	projectID := os.Getenv("GCP_PROJECT_ID")
+	projectID := os.Getenv("PROJECT_ID")
 	if len(projectID) == 0 {
-		return errors.New("GCP_PROJECT_ID is required.")
+		return errors.New("PROJECT_ID is required.")
 	}
 	return nil
 }
@@ -98,7 +98,7 @@ func partitionAndPersist(tableName string, bookName string, size int, f Saver) e
 
 func persist(start int, end int, f Saver) error {
 	ctx := context.Background()
-	projectID := os.Getenv("GCP_PROJECT_ID")
+	projectID := os.Getenv("PROJECT_ID")
 	client, err := datastore.NewClient(ctx, projectID)
 	if err != nil {
 		return err

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 )
@@ -18,13 +17,11 @@ func main() {
 	verbose, _ = strconv.ParseBool(os.Getenv("VERBOSE"))
 	mode := os.Getenv("MODE")
 	if len(mode) == 0 {
-		fmt.Println("MODE is required: gnt|wlc")
-		return
+		errorf("MODE is required: gnt|wlc")
 	}
 	err := validateCloudConfig()
 	if err != nil {
-		fmt.Println(err.Error())
-		return
+		errorf(err.Error())
 	}
 	var parser parser
 	if mode == "wlc" {
@@ -34,6 +31,6 @@ func main() {
 	}
 	err = parser.Process()
 	if err != nil {
-		fmt.Println(err.Error())
+		errorf(err.Error())
 	}
 }

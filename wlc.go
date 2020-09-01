@@ -51,7 +51,7 @@ func (t *Wlc) readData(c chan *wlcBookData, e chan error) {
 			if err.Error() == "Skip" {
 				continue
 			}
-			panic(err)
+			errorf(err.Error())
 			e <- err
 		}
 		c <- &wlcBookData{

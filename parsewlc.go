@@ -519,7 +519,7 @@ func (t *Wlc) ParseFileContent(bookName string, filename string) ([]wlcWord, err
 				sequenceID := fmt.Sprintf("%02d%03d%03d%03d", bookID, ci+1, vi+1, wordid)
 				sequence, err := strconv.ParseInt(sequenceID, 10, 64)
 				if err != nil {
-					panic(err)
+					errorf(err.Error())
 				}
 				word := t.Parse(word, verseID, sequence)
 				words = append(words, word)

@@ -19,11 +19,11 @@ func (t *Gnt) getBookNumber(filename string) int {
 	r, _ := regexp.Compile("([0-9]+)-([a-zA-Z0-9]+)-morphgnt")
 	results := r.FindStringSubmatch(filename)
 	if len(results) < 2 {
-		panic("Invalid filename " + filename)
+		errorf("Invalid filename " + filename)
 	}
 	bookNumber, err := strconv.ParseInt(results[1], 10, 32)
 	if err != nil {
-		panic(err)
+		errorf(err.Error())
 	}
 	return int(bookNumber)
 }

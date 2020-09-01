@@ -81,7 +81,7 @@ type Word struct {
 }
 
 func createConnection() (*sql.DB, error) {
-	cs := os.Getenv("MSSQL_CS")
+	cs := os.Getenv("CS")
 	connection, err := sql.Open("mssql", cs)
 	if err != nil {
 		return nil, err
@@ -94,9 +94,9 @@ func getPartitionSize() int {
 }
 
 func validateCloudConfig() error {
-	sas := os.Getenv("MSSQL_CS")
+	sas := os.Getenv("CS")
 	if len(sas) == 0 {
-		return errors.New("MSSQL_CS is required")
+		return errors.New("CS is required")
 	}
 	return nil
 }
