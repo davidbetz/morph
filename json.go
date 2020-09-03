@@ -51,11 +51,11 @@ func prepareAndPersistGnt(tableName string, bookName string, words []gntWord) er
 
 func partitionAndPersist(tableName string, bookName string, prepared [][]byte) error {
 	partitionSize := getPartitionSize()
-	fmt.Printf("Partition size: %d\n", partitionSize)
+	fmt.Printf("partition size: %d\n", partitionSize)
 	segmentNumber := 1
 	fmt.Printf("Saving %s (%d words)...\n", bookName, len(prepared))
-	for idxRange := range Partition(len(prepared), partitionSize) {
-		// fmt.Printf("Partition: %d %d %d\n", idxRange.Low, idxRange.High, idxRange.High-idxRange.Low)
+	for idxRange := range partition(len(prepared), partitionSize) {
+		// fmt.Printf("partition: %d %d %d\n", idxRange.Low, idxRange.High, idxRange.High-idxRange.Low)
 		segment := prepared[idxRange.Low:idxRange.High]
 		err := persist(tableName, bookName, segment)
 		if err != nil {

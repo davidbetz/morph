@@ -38,7 +38,9 @@ func shiftString(text string) string {
 	return text
 }
 
+// Wlc represents the WLC parser
 type Wlc struct {
+	style                      string
 	bookOrder                  map[string]int
 	filenames                  map[string]string
 	partOfSpeechLookup         map[string]string
@@ -530,8 +532,9 @@ func (t *Wlc) ParseFileContent(bookName string, filename string) ([]wlcWord, err
 	return words, nil
 }
 
-func CreateWlc() *Wlc {
-	wlc := &Wlc{}
+// CreateWlc creates a Gnt parser
+func CreateWlc(style string) *Wlc {
+	wlc := &Wlc{style: style}
 	wlc.setupTables()
 	return wlc
 }

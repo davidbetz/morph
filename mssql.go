@@ -31,7 +31,7 @@ const (
 				WordID AS CONVERT(nvarchar(200), JSON_VALUE(Content, '$.id')),
 				VerseID AS CONVERT(nvarchar(200), JSON_VALUE(Content, '$.verse')),
 				Text AS CONVERT(nvarchar(200), JSON_VALUE(Content, '$.text')),
-				Word AS CONVERT(nvarchar(200), JSON_VALUE(Content, '$.word')),
+				mssqlWord AS CONVERT(nvarchar(200), JSON_VALUE(Content, '$.word')),
 				Normalized AS CONVERT(nvarchar(200), JSON_VALUE(Content, '$.normalized')),
 				Lemma AS CONVERT(nvarchar(200), JSON_VALUE(Content, '$.lemma')),
 				Codes AS CONVERT(nvarchar(200), JSON_VALUE(Content, '$.codes')),
@@ -75,7 +75,7 @@ const (
 	`
 )
 
-type Word struct {
+type mssqlWord struct {
 	ID   int64
 	Data string
 }
@@ -141,10 +141,10 @@ func prepareAndPersistWlc(tableName string, bookName string, words []wlcWord) er
 	if err != nil {
 		return err
 	}
-	var prepared []Word
+	var prepared []mssqlWord
 	for _, word := range words {
 		m, _ := json.Marshal(word)
-		prepared = append(prepared, Word{
+		prepared = append(prepared, mssqlWord{
 			ID:   word.SequenceID,
 			Data: string(m),
 		})
@@ -163,10 +163,10 @@ func prepareAndPersistGnt(tableName string, bookName string, words []gntWord) er
 	if err != nil {
 		return err
 	}
-	var prepared []Word
+	var prepared []mssqlWord
 	for _, word := range words {
 		m, _ := json.Marshal(word)
-		prepared = append(prepared, Word{
+		prepared = append(prepared, mssqlWord{
 			ID:   word.ID,
 			Data: string(m),
 		})
@@ -174,13 +174,13 @@ func prepareAndPersistGnt(tableName string, bookName string, words []gntWord) er
 	return partitionAndPersist(db, tableName, bookName, prepared)
 }
 
-func partitionAndPersist(db *sql.DB, tableName string, bookName string, prepared []Word) error {
+func partitionAndPersist(db *sql.DB, tableName string, bookName string, prepared []mssqlWord) error {
 	partitionSize := getPartitionSize()
-	fmt.Printf("Partition size: %d\n", partitionSize)
+	fmt.Printf("partition size: %d\n", partitionSize)
 	segmentNumber := 1
 	fmt.Printf("Saving %s (%d words)...\n", bookName, len(prepared))
-	for idxRange := range Partition(len(prepared), partitionSize) {
-		// fmt.Printf("Partition: %d %d %d\n", idxRange.Low, idxRange.High, idxRange.High-idxRange.Low)
+	for idxRange := range partition(len(prepared), partitionSize) {
+		// fmt.Printf("partition: %d %d %d\n", idxRange.Low, idxRange.High, idxRange.High-idxRange.Low)
 		segment := prepared[idxRange.Low:idxRange.High]
 		err := persist(db, tableName, segment)
 		if err != nil {
@@ -196,7 +196,7 @@ func partitionAndPersist(db *sql.DB, tableName string, bookName string, prepared
 	return nil
 }
 
-func persist(db *sql.DB, tableName string, segment []Word) error {
+func persist(db *sql.DB, tableName string, segment []mssqlWord) error {
 	txn, err := db.Begin()
 	if err != nil {
 		return err

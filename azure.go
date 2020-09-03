@@ -13,7 +13,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/storage"
 )
 
-type Word struct {
+type azureWord struct {
 	PartitionKey string
 	RowKey       string
 	Properties   map[string]interface{}
@@ -42,7 +42,7 @@ func validateCloudConfig() error {
 }
 
 func prepareAndPersistWlc(tableName string, bookName string, words []wlcWord) error {
-	var prepared []Word
+	var prepared []azureWord
 	for _, word := range words {
 		preparedProperties := map[string]interface{}{
 			"Lemma":  word.Lemma,
@@ -52,7 +52,7 @@ func prepareAndPersistWlc(tableName string, bookName string, words []wlcWord) er
 			"UniqueID":   word.Verse,
 			"Codes":      word.Codes,
 		}
-		prepared = append(prepared, Word{
+		prepared = append(prepared, azureWord{
 			PartitionKey: word.Verse,
 			RowKey:       fmt.Sprintf("%d", word.SequenceID),
 			Properties:   preparedProperties,
@@ -62,9 +62,9 @@ func prepareAndPersistWlc(tableName string, bookName string, words []wlcWord) er
 }
 
 func prepareAndPersistGnt(tableName string, bookName string, words []gntWord) error {
-	var prepared []Word
+	var prepared []azureWord
 	for _, word := range words {
-		prepared = append(prepared, Word{
+		prepared = append(prepared, azureWord{
 			PartitionKey: word.Verse,
 			RowKey:       fmt.Sprintf("%d", word.ID),
 			Properties: map[string]interface{}{
@@ -88,12 +88,12 @@ func prepareAndPersistGnt(tableName string, bookName string, words []gntWord) er
 	return partitionAndPersist(tableName, bookName, prepared)
 }
 
-func partitionAndPersist(tableName string, bookName string, prepared []Word) error {
+func partitionAndPersist(tableName string, bookName string, prepared []azureWord) error {
 	partitionSize := getPartitionSize()
-	fmt.Printf("Partition size: %d\n", partitionSize)
+	fmt.Printf("partition size: %d\n", partitionSize)
 	segmentNumber := 1
 	fmt.Printf("Saving %s (%d words)...\n", bookName, len(prepared))
-	for idxRange := range Partition(len(prepared), partitionSize) {
+	for idxRange := range partition(len(prepared), partitionSize) {
 		segment := prepared[idxRange.Low:idxRange.High]
 		err := persist(tableName, segment)
 		if err != nil {
@@ -109,7 +109,7 @@ func partitionAndPersist(tableName string, bookName string, prepared []Word) err
 	return nil
 }
 
-func persist(tableName string, segment []Word) error {
+func persist(tableName string, segment []azureWord) error {
 	for _, word := range segment {
 		table := getTableReference(tableName)
 		entity := table.GetEntityReference(word.PartitionKey, word.RowKey)

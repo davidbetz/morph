@@ -28,14 +28,14 @@ func (t *Gnt) getBookNumber(filename string) int {
 	return int(bookNumber)
 }
 
-func (t *Gnt) readData(c chan *gntBookData, e chan error) {
-	folder := sourceFileLocation
+func (t *Gnt) readData(books chan *gntBookData) {
+	folder := os.Getenv("SOURCE")
 	if len(folder) == 0 {
 		folder = "./morphgnt/"
 	}
 	files, err := ioutil.ReadDir(folder)
 	if err != nil {
-		e <- err
+		errorf(err.Error())
 	}
 	for _, f := range files {
 		filename := f.Name()
@@ -45,14 +45,14 @@ func (t *Gnt) readData(c chan *gntBookData, e chan error) {
 			if err.Error() == "Skip" {
 				continue
 			}
-			e <- err
+			errorf(err.Error())
 		}
-		c <- &gntBookData{
+		books <- &gntBookData{
 			bookName,
 			words,
 		}
 	}
-	c <- nil
+	close(books)
 }
 
 func (t *Gnt) getTableName() string {
@@ -64,26 +64,18 @@ func (t *Gnt) getTableName() string {
 }
 
 func (t *Gnt) Process() error {
-	c := make(chan *gntBookData)
-	e := make(chan error)
-	go t.readData(c, e)
-	for {
-		select {
-		case contents := <-c:
-			if contents == nil {
-				return nil
-			}
-			fmt.Printf("Parsed %s. Saving...\n", contents.Name)
-			name := t.bookNames[t.getBookNumber(contents.Name)]
-			err := prepareAndPersistGnt(t.getTableName(), name, contents.Data)
-			if err != nil {
-				return err
-			}
-		case err := <-e:
-			if err != nil {
-				return err
-			}
-			return postPersistWLC(t.getTableName())
+	books := make(chan *gntBookData)
+	go t.readData(books)
+	for book := range books {
+		if book == nil {
+			return nil
+		}
+		fmt.Printf("Parsed %s. Saving...\n", book.Name)
+		name := t.bookNames[t.getBookNumber(book.Name)]
+		err := prepareAndPersistGnt(t.getTableName(), name, book.Data)
+		if err != nil {
+			return err
 		}
 	}
+	return postPersistWLC(t.getTableName())
 }

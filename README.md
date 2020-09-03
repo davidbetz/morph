@@ -14,19 +14,23 @@ The [morphhb](https://github.com/openscriptures/morphhb) text isn't usable direc
 
 Test the local setup with the following:
 
-    make linux-print && MODE=gnt ./morph-print
-    make linux-print && MODE=wlc ./morph-print
+    make linux-print && ./morph-print -mode gnt
+    make linux-print && ./morph-print -mode wlc
 
-For all following examples, `MODE` can be `gnt` or `wlc`.
+For all following examples, `-mode` can be `gnt` or `wlc`.
+
+When using `wlc`, you can use either Hebrew or English versification. Specify `-style english` to use English. The default is Hebrew.
+
+All other arguments are specified as environment variables.
 
 Use `TABLE_NAME` to explicitly set the destination. By default `morphgnt` and `morphwlc` are used.
 
-When using `wlc`, you can use either Hebrew or English versification. Specify `VERSE_MODE=english` to use English. The default is Hebrew.
+Use `SOURCE` to manually specify the root folder of the GNT and WLC files.
 
 Windows is also supported:
 
     make windows-print
-    MODE=gnt morph-print.exe
+    morph-print.exe -mode gnt
 
 ## Ephemeral VM Setup
 
@@ -52,7 +56,7 @@ Never create infrastructure in your application. Separate it. If your applicatio
 
 Per the principle of least-privlege, only the listed permissions are required on the ephemeral VM.
 
-The default table name is `morph`. You can rename this with the TABLE_NAME environment variable.
+The default table name is `morph`. You can rename this with the `TABLE_NAME` environment variable.
 
 ## AWS
 
@@ -70,7 +74,7 @@ Client VM only requires `dynamodb:BatchWriteItem`
 
 Run with:
 
-    make linux-aws && MODE=gnt AWS_REGION=<REGION> ./morph-aws
+    make linux-aws && AWS_REGION=<REGION> ./morph-aws -mode gnt
 
 You can set the region in other standard ways too.
 
@@ -81,7 +85,7 @@ Create a storage account with `morphtgnt` table. Create a SAS token (with full U
 
 Run with:
 
-    make linux-azure && MODE=gnt AZURE_CS=<SAS_STRING> ./morph-azure
+    make linux-azure && SAS=<SAS_STRING> ./morph-azure -mode gnt
 
 ## GCP
 
@@ -91,7 +95,7 @@ Client VM only requires `Cloud Datastore User`
 
 Run with:
 
-    make linux-gcp && MODE=gnt GCP_PROJECT_ID=<PROJECT_ID> ./morph-gcp
+    make linux-gcp && PROJECT_ID=<PROJECT_ID> ./morph-gcp -mode gnt
 
 ## Microsoft SQL Server
 
@@ -107,9 +111,9 @@ SQL Server connection strings can take different forms. The following is common:
 
 See [https://www.connectionstrings.com/sql-server/](https://www.connectionstrings.com/sql-server/) for more details.
 
-Run with (set MSSQL_CS):
+Run with (set CS):
 
     export MSSQL_CS='Server=SERVER_NAME;Database=morph;User Id=sa;Password=PASSWORD'
-    make linux-mssql && MODE=gnt MSSQL_CS=$MSSQL_CS ./morph-mssql
+    make linux-mssql && CS=$MSSQL_CS ./morph-mssql -mode gnt
 
-Yes, `sa` is fine for local playing around. You'll be fine.
+`sa` is fine for local playing around.

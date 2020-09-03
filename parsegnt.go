@@ -37,12 +37,6 @@ type gntWord struct {
 	Lemma      string        `json:"lemma"`
 }
 
-func CreateGnt() *Gnt {
-	gnt := &Gnt{}
-	gnt.setupTables()
-	return gnt
-}
-
 func (t *Gnt) getPartName(part string) string {
 	switch part {
 	case "A-":
@@ -127,6 +121,7 @@ func (t *Gnt) getMorphology(part string, code string) gntMorphology {
 	}
 }
 
+// Gnt represents the GNT parser
 type Gnt struct {
 	personLookup map[string]string
 	tenseLookup  map[string]string
@@ -279,4 +274,11 @@ func (t *Gnt) ParseFileContent(filename string) ([]gntWord, error) {
 		id++
 	}
 	return words, nil
+}
+
+// CreateGnt creates a Gnt parser
+func CreateGnt() *Gnt {
+	gnt := &Gnt{}
+	gnt.setupTables()
+	return gnt
 }

@@ -20,24 +20,25 @@ func (t *Wlc) getTableName() string {
 	return tableName
 }
 
-func (t *Wlc) getStyle() string {
-	style := os.Getenv("VERSE_MODE")
+func (t *Wlc) cleanStyle() string {
+	style := t.style
 	if style == "english" {
 		style = "remapped"
 		fmt.Println("Using English verses.")
 	} else {
 		style = "hebrew"
-		fmt.Println("Using Hebrew verses. Specify VERSE_MODE=english for the other mode.")
+		fmt.Println("Using Hebrew verses. Specify -style=english for the other mode.")
 	}
 	return style
 }
 
-func (t *Wlc) readData(c chan *wlcBookData, e chan error) {
-	folder := sourceFileLocation
-	style := t.getStyle()
+func (t *Wlc) readData(books chan *wlcBookData) {
+	folder := os.Getenv("SOURCE")
 	if len(folder) == 0 {
-		folder = fmt.Sprintf("./morphhb/%s/", style)
+		folder = "./morphhb/"
 	}
+	style := t.cleanStyle()
+	folder = path.Join(folder, style)
 	for n := 1; n < 40; n++ {
 		var bookName string
 		for name, number := range t.bookOrder {
@@ -52,36 +53,24 @@ func (t *Wlc) readData(c chan *wlcBookData, e chan error) {
 				continue
 			}
 			errorf(err.Error())
-			e <- err
 		}
-		c <- &wlcBookData{
+		books <- &wlcBookData{
 			bookName,
 			words,
 		}
 	}
-	c <- nil
+	close(books)
 }
 
 func (t *Wlc) Process() error {
-	c := make(chan *wlcBookData)
-	e := make(chan error)
-	go t.readData(c, e)
-	for {
-		select {
-		case contents := <-c:
-			if contents == nil {
-				return nil
-			}
-			fmt.Printf("Parsed %s. Saving...\n", contents.Name)
-			err := prepareAndPersistWlc(t.getTableName(), contents.Name, contents.Data)
-			if err != nil {
-				return err
-			}
-		case err := <-e:
-			if err != nil {
-				return err
-			}
-			return postPersistWLC(t.getTableName())
+	books := make(chan *wlcBookData)
+	go t.readData(books)
+	for book := range books {
+		fmt.Printf("Parsed %s. Saving...\n", book.Name)
+		err := prepareAndPersistWlc(t.getTableName(), book.Name, book.Data)
+		if err != nil {
+			return err
 		}
 	}
+	return postPersistWLC(t.getTableName())
 }

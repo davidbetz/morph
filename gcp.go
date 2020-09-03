@@ -21,7 +21,7 @@ type wlcWordDataStoreEntity struct {
 	Verse      string `datastore:"verse"`
 }
 
-type Saver func(context.Context, int, int, *datastore.Client) ([]*datastore.Key, error)
+type saver func(context.Context, int, int, *datastore.Client) ([]*datastore.Key, error)
 
 func getPartitionSize() int {
 	return 200
@@ -76,12 +76,12 @@ func prepareAndPersistGnt(tableName string, bookName string, words []gntWord) er
 	return partitionAndPersist(tableName, bookName, len(words), f)
 }
 
-func partitionAndPersist(tableName string, bookName string, size int, f Saver) error {
+func partitionAndPersist(tableName string, bookName string, size int, f saver) error {
 	partitionSize := getPartitionSize()
-	fmt.Printf("Partition size: %d\n", partitionSize)
+	fmt.Printf("partition size: %d\n", partitionSize)
 	segmentNumber := 1
 	fmt.Printf("Saving %s (%d words)...\n", bookName, size)
-	for idxRange := range Partition(size, partitionSize) {
+	for idxRange := range partition(size, partitionSize) {
 		err := persist(idxRange.Low, idxRange.High, f)
 		if err != nil {
 			return err
@@ -96,7 +96,7 @@ func partitionAndPersist(tableName string, bookName string, size int, f Saver) e
 	return nil
 }
 
-func persist(start int, end int, f Saver) error {
+func persist(start int, end int, f saver) error {
 	ctx := context.Background()
 	projectID := os.Getenv("PROJECT_ID")
 	client, err := datastore.NewClient(ctx, projectID)
