@@ -94,8 +94,8 @@ func getPartitionSize() int {
 }
 
 func validateCloudConfig() error {
-	sas := os.Getenv("CS")
-	if len(sas) == 0 {
+	cs := os.Getenv("CS")
+	if len(cs) == 0 {
 		return errors.New("CS is required")
 	}
 	return nil

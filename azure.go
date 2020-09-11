@@ -20,8 +20,8 @@ type azureWord struct {
 }
 
 func getTableReference(tableName string) *storage.Table {
-	sas := os.Getenv("SAS")
-	client, err := storage.NewClientFromConnectionString(sas)
+	cs := os.Getenv("CS")
+	client, err := storage.NewClientFromConnectionString(cs)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -34,9 +34,9 @@ func getPartitionSize() int {
 }
 
 func validateCloudConfig() error {
-	sas := os.Getenv("SAS")
-	if len(sas) == 0 {
-		return errors.New("SAS is required.")
+	cs := os.Getenv("CS")
+	if len(cs) == 0 {
+		return errors.New("CS is required.")
 	}
 	return nil
 }

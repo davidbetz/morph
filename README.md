@@ -81,11 +81,11 @@ You can set the region in other standard ways too.
 
 ## Azure
 
-Create a storage account with `morphtgnt` table. Create a SAS token (with full URI).
+Create a storage account with `morphtgnt` table. Create a connection string (not just a bare SAS).
 
 Run with:
 
-    make linux-azure && SAS=<SAS_STRING> ./morph-azure -mode gnt
+    make linux-azure && CS=<CS_STRING> ./morph-azure -mode gnt
 
 ## GCP
 
