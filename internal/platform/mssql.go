@@ -1,6 +1,7 @@
+//go:build mssql
 // +build mssql
 
-package main
+package platform
 
 import (
 	"database/sql"
@@ -10,6 +11,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/davidbetz/morph/internal/models"
+	"github.com/davidbetz/morph/internal/util"
 	_ "github.com/denisenkom/go-mssqldb"
 	mssql "github.com/denisenkom/go-mssqldb"
 )
@@ -93,7 +96,7 @@ func getPartitionSize() int {
 	return 1000
 }
 
-func validateCloudConfig() error {
+func ValidateCloudConfig() error {
 	cs := os.Getenv("CS")
 	if len(cs) == 0 {
 		return errors.New("CS is required")
@@ -101,7 +104,7 @@ func validateCloudConfig() error {
 	return nil
 }
 
-func postPersistWLC(tableName string) error {
+func PostPersistWLC(tableName string) error {
 	db, err := createConnection()
 	if err != nil {
 		return err
@@ -115,7 +118,7 @@ func postPersistWLC(tableName string) error {
 	return nil
 }
 
-func postPersistGNT(tableName string) error {
+func PostPersistGNT(tableName string) error {
 	db, err := createConnection()
 	if err != nil {
 		return err
@@ -130,7 +133,7 @@ func postPersistGNT(tableName string) error {
 	return nil
 }
 
-func prepareAndPersistWlc(tableName string, bookName string, words []wlcWord) error {
+func PrepareAndPersistWlc(tableName string, bookName string, words []models.WlcWord) error {
 	db, err := createConnection()
 	if err != nil {
 		return err
@@ -149,10 +152,10 @@ func prepareAndPersistWlc(tableName string, bookName string, words []wlcWord) er
 			Data: string(m),
 		})
 	}
-	return partitionAndPersist(db, tableName, bookName, prepared)
+	return PartitionAndPersist(db, tableName, bookName, prepared)
 }
 
-func prepareAndPersistGnt(tableName string, bookName string, words []gntWord) error {
+func PrepareAndPersistGnt(tableName string, bookName string, words []models.GntWord) error {
 	db, err := createConnection()
 	if err != nil {
 		return err
@@ -171,22 +174,22 @@ func prepareAndPersistGnt(tableName string, bookName string, words []gntWord) er
 			Data: string(m),
 		})
 	}
-	return partitionAndPersist(db, tableName, bookName, prepared)
+	return PartitionAndPersist(db, tableName, bookName, prepared)
 }
 
-func partitionAndPersist(db *sql.DB, tableName string, bookName string, prepared []mssqlWord) error {
-	partitionSize := getPartitionSize()
-	fmt.Printf("partition size: %d\n", partitionSize)
+func PartitionAndPersist(db *sql.DB, tableName string, bookName string, prepared []mssqlWord) error {
+	PartitionSize := getPartitionSize()
+	fmt.Printf("Partition size: %d\n", PartitionSize)
 	segmentNumber := 1
 	fmt.Printf("Saving %s (%d words)...\n", bookName, len(prepared))
-	for idxRange := range partition(len(prepared), partitionSize) {
-		// fmt.Printf("partition: %d %d %d\n", idxRange.Low, idxRange.High, idxRange.High-idxRange.Low)
+	for idxRange := range util.Partition(len(prepared), PartitionSize) {
+		// fmt.Printf("Partition: %d %d %d\n", idxRange.Low, idxRange.High, idxRange.High-idxRange.Low)
 		segment := prepared[idxRange.Low:idxRange.High]
 		err := persist(db, tableName, segment)
 		if err != nil {
 			return err
 		}
-		percent := (float64(segmentNumber) * float64((partitionSize)) / float64(len(prepared))) * 100
+		percent := (float64(segmentNumber) * float64((PartitionSize)) / float64(len(prepared))) * 100
 		if percent > 100 {
 			percent = 100
 		}

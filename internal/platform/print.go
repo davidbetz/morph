@@ -1,17 +1,21 @@
+//go:build print
 // +build print
 
-package main
+package platform
 
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/davidbetz/morph/internal/models"
+	"github.com/davidbetz/morph/internal/util"
 )
 
 func getPartitionSize() int {
 	return 100
 }
 
-func validateCloudConfig() error {
+func ValidateCloudConfig() error {
 	return nil
 }
 
@@ -24,40 +28,40 @@ func unifiedPersist(tableName string, bookName string, words []interface{}) erro
 		}
 		prepared = append(prepared, string(output))
 	}
-	err := partitionAndPersist(bookName, prepared)
+	err := PartitionAndPersist(bookName, prepared)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func prepareAndPersistWlc(tableName string, bookName string, words []wlcWord) error {
+func PrepareAndPersistWlc(tableName string, bookName string, words []models.WlcWord) error {
 	var taco []interface{}
 	m, _ := json.Marshal(words)
 	json.Unmarshal(m, &taco)
 	return unifiedPersist(tableName, bookName, taco)
 }
 
-func prepareAndPersistGnt(tableName string, bookName string, words []gntWord) error {
+func PrepareAndPersistGnt(tableName string, bookName string, words []models.GntWord) error {
 	var taco []interface{}
 	m, _ := json.Marshal(words)
 	json.Unmarshal(m, &taco)
 	return unifiedPersist(tableName, bookName, taco)
 }
 
-func partitionAndPersist(bookName string, prepared []string) error {
-	partitionSize := getPartitionSize()
-	fmt.Printf("partition size: %d\n", partitionSize)
+func PartitionAndPersist(bookName string, prepared []string) error {
+	PartitionSize := getPartitionSize()
+	fmt.Printf("Partition size: %d\n", PartitionSize)
 	segmentNumber := 1
 	fmt.Printf("Saving %s (%d words)...\n", bookName, len(prepared))
-	for idxRange := range partition(len(prepared), partitionSize) {
-		// fmt.Printf("partition: %d %d %d\n", idxRange.Low, idxRange.High, idxRange.High-idxRange.Low)
+	for idxRange := range util.Partition(len(prepared), PartitionSize) {
+		// fmt.Printf("Partition: %d %d %d\n", idxRange.Low, idxRange.High, idxRange.High-idxRange.Low)
 		segment := prepared[idxRange.Low:idxRange.High]
 		err := persist(segment)
 		if err != nil {
 			return err
 		}
-		percent := (float64(segmentNumber) * float64((partitionSize)) / float64(len(prepared))) * 100
+		percent := (float64(segmentNumber) * float64((PartitionSize)) / float64(len(prepared))) * 100
 		if percent > 100 {
 			percent = 100
 		}
@@ -74,10 +78,10 @@ func persist(words []string) error {
 	return nil
 }
 
-func postPersistWLC(tableName string) error {
+func PostPersistWLC(tableName string) error {
 	return nil
 }
 
-func postPersistGNT(tableName string) error {
+func PostPersistGNT(tableName string) error {
 	return nil
 }

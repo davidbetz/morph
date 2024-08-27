@@ -1,6 +1,7 @@
+//go:build azure
 // +build azure
 
-package main
+package platform
 
 //+ https://github.com/Azure/azure-sdk-for-go/blob/77258e94d84ea36012a72c0e0a1e2faa409c6396/storage/entity_test.go
 
@@ -11,6 +12,8 @@ import (
 	"os"
 
 	"github.com/Azure/azure-sdk-for-go/storage"
+	"github.com/davidbetz/morph/internal/models"
+	"github.com/davidbetz/morph/internal/util"
 )
 
 type azureWord struct {
@@ -33,7 +36,7 @@ func getPartitionSize() int {
 	return 1000
 }
 
-func validateCloudConfig() error {
+func ValidateCloudConfig() error {
 	cs := os.Getenv("CS")
 	if len(cs) == 0 {
 		return errors.New("CS is required.")
@@ -41,7 +44,7 @@ func validateCloudConfig() error {
 	return nil
 }
 
-func prepareAndPersistWlc(tableName string, bookName string, words []wlcWord) error {
+func PrepareAndPersistWlc(tableName string, bookName string, words []models.WlcWord) error {
 	var prepared []azureWord
 	for _, word := range words {
 		preparedProperties := map[string]interface{}{
@@ -58,10 +61,10 @@ func prepareAndPersistWlc(tableName string, bookName string, words []wlcWord) er
 			Properties:   preparedProperties,
 		})
 	}
-	return partitionAndPersist(tableName, bookName, prepared)
+	return PartitionAndPersist(tableName, bookName, prepared)
 }
 
-func prepareAndPersistGnt(tableName string, bookName string, words []gntWord) error {
+func PrepareAndPersistGnt(tableName string, bookName string, words []models.GntWord) error {
 	var prepared []azureWord
 	for _, word := range words {
 		prepared = append(prepared, azureWord{
@@ -85,21 +88,21 @@ func prepareAndPersistGnt(tableName string, bookName string, words []gntWord) er
 			},
 		})
 	}
-	return partitionAndPersist(tableName, bookName, prepared)
+	return PartitionAndPersist(tableName, bookName, prepared)
 }
 
-func partitionAndPersist(tableName string, bookName string, prepared []azureWord) error {
-	partitionSize := getPartitionSize()
-	fmt.Printf("partition size: %d\n", partitionSize)
+func PartitionAndPersist(tableName string, bookName string, prepared []azureWord) error {
+	PartitionSize := getPartitionSize()
+	fmt.Printf("Partition size: %d\n", PartitionSize)
 	segmentNumber := 1
 	fmt.Printf("Saving %s (%d words)...\n", bookName, len(prepared))
-	for idxRange := range partition(len(prepared), partitionSize) {
+	for idxRange := range util.Partition(len(prepared), PartitionSize) {
 		segment := prepared[idxRange.Low:idxRange.High]
 		err := persist(tableName, segment)
 		if err != nil {
 			return err
 		}
-		percent := ((float64(segmentNumber) * float64((partitionSize)) / float64(len(prepared))) * 100)
+		percent := ((float64(segmentNumber) * float64((PartitionSize)) / float64(len(prepared))) * 100)
 		if percent > 100 {
 			percent = 100
 		}
@@ -122,10 +125,10 @@ func persist(tableName string, segment []azureWord) error {
 	return nil
 }
 
-func postPersistWLC(tableName string) error {
+func PostPersistWLC(tableName string) error {
 	return nil
 }
 
-func postPersistGNT(tableName string) error {
+func PostPersistGNT(tableName string) error {
 	return nil
 }

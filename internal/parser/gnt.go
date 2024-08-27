@@ -1,29 +1,32 @@
-package main
+package parser
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
+
+	"github.com/davidbetz/morph/internal/models"
+	"github.com/davidbetz/morph/internal/platform"
+	"github.com/davidbetz/morph/internal/util"
 )
 
 type gntBookData struct {
 	Name string
-	Data []gntWord
+	Data []models.GntWord
 }
 
 func (t *Gnt) getBookNumber(filename string) int {
 	r, _ := regexp.Compile("([0-9]+)-([a-zA-Z0-9]+)-morphgnt")
 	results := r.FindStringSubmatch(filename)
 	if len(results) < 2 {
-		errorf("Invalid filename " + filename)
+		util.Errorf("Invalid filename " + filename)
 	}
 	bookNumber, err := strconv.ParseInt(results[1], 10, 32)
 	if err != nil {
-		errorf(err.Error())
+		util.Errorf(err.Error())
 	}
 	return int(bookNumber)
 }
@@ -33,9 +36,9 @@ func (t *Gnt) readData(books chan *gntBookData) {
 	if len(folder) == 0 {
 		folder = "./morphgnt/"
 	}
-	files, err := ioutil.ReadDir(folder)
+	files, err := os.ReadDir(folder)
 	if err != nil {
-		errorf(err.Error())
+		util.Errorf(err.Error())
 	}
 	for _, f := range files {
 		filename := f.Name()
@@ -45,7 +48,7 @@ func (t *Gnt) readData(books chan *gntBookData) {
 			if err.Error() == "Skip" {
 				continue
 			}
-			errorf(err.Error())
+			util.Errorf(err.Error())
 		}
 		books <- &gntBookData{
 			bookName,
@@ -72,10 +75,10 @@ func (t *Gnt) Process() error {
 		}
 		fmt.Printf("Parsed %s. Saving...\n", book.Name)
 		name := t.bookNames[t.getBookNumber(book.Name)]
-		err := prepareAndPersistGnt(t.getTableName(), name, book.Data)
+		err := platform.PrepareAndPersistGnt(t.getTableName(), name, book.Data)
 		if err != nil {
 			return err
 		}
 	}
-	return postPersistWLC(t.getTableName())
+	return platform.PostPersistWLC(t.getTableName())
 }

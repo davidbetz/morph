@@ -1,15 +1,18 @@
-package main
+package parser
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/davidbetz/morph/internal/models"
+	"github.com/davidbetz/morph/internal/util"
 )
 
 type node struct {
@@ -19,17 +22,6 @@ type node struct {
 	Next      *node
 	Alternate *node
 	Decider   func(string) bool
-}
-
-type wlcWord struct {
-	Codes            string              `json:"codes"`
-	Language         string              `json:"language"`
-	Lemma            string              `json:"lemma"`
-	ID               string              `json:"coreid"`
-	Morphology       []map[string]string `json:"morphology"`
-	SequenceID       int64               `json:"id"`
-	Verse            string              `json:"verse"`
-	MorphologyString string
 }
 
 func shiftString(text string) string {
@@ -417,7 +409,7 @@ func (t *Wlc) parseMorphology(morph string) (string, []map[string]string) {
 		language = "Aramaic"
 		break
 	}
-	debug(fmt.Sprintf("STARTING NEXT WORD %s %s\n", original, language))
+	util.Debug(fmt.Sprintf("STARTING NEXT WORD %s %s\n", original, language))
 	var morphologyArray []map[string]string
 	parts := strings.Split(morph, "/")
 	for _, part := range parts {
@@ -428,30 +420,30 @@ func (t *Wlc) parseMorphology(morph string) (string, []map[string]string) {
 		var tree *node
 		if partOfSpeechCode == "V" {
 			tree = t.trees[partOfSpeechCode+languageCode]
-			debug(fmt.Sprintf("TREE: %s %v\n", partOfSpeechCode+languageCode, tree))
+			util.Debug(fmt.Sprintf("TREE: %s %v\n", partOfSpeechCode+languageCode, tree))
 		} else {
 			tree = t.trees[partOfSpeechCode]
-			debug(fmt.Sprintf("TREE: %s %v\n", partOfSpeechCode, tree))
+			util.Debug(fmt.Sprintf("TREE: %s %v\n", partOfSpeechCode, tree))
 		}
 		topName := tree.TopName
 		if len(topName) == 0 {
 			topName = tree.Name
 		}
 		m["Part"] = topName
-		debug(fmt.Sprintf("\tSTARTING NEXT PART, %s %s\n", original, tree.Name))
+		util.Debug(fmt.Sprintf("\tSTARTING NEXT PART, %s %s\n", original, tree.Name))
 		for _, l := range part {
 			letter := string(l)
-			debug(fmt.Sprintf("\t\tSTARTING NEXT LETTER, %s %q\n", letter, tree))
+			util.Debug(fmt.Sprintf("\t\tSTARTING NEXT LETTER, %s %q\n", letter, tree))
 			if tree.Name != "-" {
 				m[tree.Name] = tree.Lookup[letter]
 			}
 			if tree != nil {
 				if d := tree.Decider; d != nil {
 					if d(letter) {
-						debug(fmt.Sprintf("DECIDER CALLED TRUE %s\n", letter))
+						util.Debug(fmt.Sprintf("DECIDER CALLED TRUE %s\n", letter))
 						tree = tree.Next
 					} else {
-						debug(fmt.Sprintf("DECIDER CALLED FALSE %s\n", letter))
+						util.Debug(fmt.Sprintf("DECIDER CALLED FALSE %s\n", letter))
 						tree = tree.Alternate
 					}
 				} else {
@@ -464,7 +456,7 @@ func (t *Wlc) parseMorphology(morph string) (string, []map[string]string) {
 	return language, morphologyArray
 }
 
-func (t *Wlc) Parse(word []string, verseID string, sequence int64) wlcWord {
+func (t *Wlc) Parse(word []string, verseID string, sequence int64) models.WlcWord {
 	lemma := word[0]
 	id := word[1]
 	morph := word[2]
@@ -477,7 +469,7 @@ func (t *Wlc) Parse(word []string, verseID string, sequence int64) wlcWord {
 		}
 		outer = append(outer, strings.Join(inner, ","))
 	}
-	return wlcWord{
+	return models.WlcWord{
 		Codes:            morph,
 		Language:         language,
 		Morphology:       morphologyArray,
@@ -497,11 +489,15 @@ func (t *Wlc) ReadFile(filename string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-	return ioutil.ReadAll(file)
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error closing file: %v\n", err)
+		}
+	}()
+	return io.ReadAll(file)
 }
 
-func (t *Wlc) ParseFileContent(bookName string, filename string) ([]wlcWord, error) {
+func (t *Wlc) ParseFileContent(bookName string, filename string) ([]models.WlcWord, error) {
 	buffer, err := t.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -513,7 +509,7 @@ func (t *Wlc) ParseFileContent(bookName string, filename string) ([]wlcWord, err
 	}
 	bookID := t.bookOrder[bookName]
 	wordid := 1
-	var words []wlcWord
+	var words []models.WlcWord
 	for ci, chapter := range obj {
 		for vi, verse := range chapter {
 			for _, word := range verse {
@@ -521,7 +517,7 @@ func (t *Wlc) ParseFileContent(bookName string, filename string) ([]wlcWord, err
 				sequenceID := fmt.Sprintf("%02d%03d%03d%03d", bookID, ci+1, vi+1, wordid)
 				sequence, err := strconv.ParseInt(sequenceID, 10, 64)
 				if err != nil {
-					errorf(err.Error())
+					util.Errorf(err.Error())
 				}
 				word := t.Parse(word, verseID, sequence)
 				words = append(words, word)

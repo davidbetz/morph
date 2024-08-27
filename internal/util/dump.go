@@ -1,17 +1,19 @@
-package main
+package util
 
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/davidbetz/morph/internal/config"
 )
 
-func debug(text string) {
-	if verbose {
+func Debug(text string) {
+	if config.IsVerbose() {
 		fmt.Print(text)
 	}
 }
 
-func dump(name string, obj interface{}) {
+func Dump(name string, obj interface{}) {
 	fmt.Println("DUMP")
 	b, err := json.MarshalIndent(obj, "", "  ")
 	if err != nil {

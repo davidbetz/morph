@@ -1,15 +1,19 @@
-package main
+package parser
 
 import (
 	"fmt"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/davidbetz/morph/internal/models"
+	"github.com/davidbetz/morph/internal/platform"
+	"github.com/davidbetz/morph/internal/util"
 )
 
 type wlcBookData struct {
 	Name string
-	Data []wlcWord
+	Data []models.WlcWord
 }
 
 func (t *Wlc) getTableName() string {
@@ -52,7 +56,7 @@ func (t *Wlc) readData(books chan *wlcBookData) {
 			if err.Error() == "Skip" {
 				continue
 			}
-			errorf(err.Error())
+			util.Errorf(err.Error())
 		}
 		books <- &wlcBookData{
 			bookName,
@@ -67,10 +71,10 @@ func (t *Wlc) Process() error {
 	go t.readData(books)
 	for book := range books {
 		fmt.Printf("Parsed %s. Saving...\n", book.Name)
-		err := prepareAndPersistWlc(t.getTableName(), book.Name, book.Data)
+		err := platform.PrepareAndPersistWlc(t.getTableName(), book.Name, book.Data)
 		if err != nil {
 			return err
 		}
 	}
-	return postPersistWLC(t.getTableName())
+	return platform.PostPersistWLC(t.getTableName())
 }

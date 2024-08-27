@@ -63,11 +63,11 @@ The default table name is `morph`. You can rename this with the `TABLE_NAME` env
 Create the following DynamoDB table:
 
     Name: MorphGNT
-        Hash (partition key): verse (S)
+        Hash (Partition key): verse (S)
         Range (sort key): id (N)
         
     Name: MorphWLC
-        Hash (partition key): verse (S)
+        Hash (Partition key): verse (S)
         Range (sort key): id (N)
 
 Client VM only requires `dynamodb:BatchWriteItem`

@@ -1,6 +1,7 @@
+//go:build gcp
 // +build gcp
 
-package main
+package platform
 
 import (
 	"context"
@@ -9,6 +10,8 @@ import (
 	"os"
 
 	"cloud.google.com/go/datastore"
+	"github.com/davidbetz/morph/internal/models"
+	"github.com/davidbetz/morph/internal/util"
 )
 
 type wlcWordDataStoreEntity struct {
@@ -27,7 +30,7 @@ func getPartitionSize() int {
 	return 200
 }
 
-func validateCloudConfig() error {
+func ValidateCloudConfig() error {
 	projectID := os.Getenv("PROJECT_ID")
 	if len(projectID) == 0 {
 		return errors.New("PROJECT_ID is required.")
@@ -35,7 +38,7 @@ func validateCloudConfig() error {
 	return nil
 }
 
-func prepareAndPersistWlc(tableName string, bookName string, words []wlcWord) error {
+func PrepareAndPersistWlc(tableName string, bookName string, words []models.WlcWord) error {
 	var keys []*datastore.Key
 	var prepared []wlcWordDataStoreEntity
 	for _, word := range words {
@@ -58,10 +61,10 @@ func prepareAndPersistWlc(tableName string, bookName string, words []wlcWord) er
 		}
 		return results, nil
 	}
-	return partitionAndPersist(tableName, bookName, len(prepared), f)
+	return PartitionAndPersist(tableName, bookName, len(prepared), f)
 }
 
-func prepareAndPersistGnt(tableName string, bookName string, words []gntWord) error {
+func PrepareAndPersistGnt(tableName string, bookName string, words []models.GntWord) error {
 	var keys []*datastore.Key
 	for _, key := range words {
 		keys = append(keys, datastore.NameKey(tableName, fmt.Sprintf("%d", key.ID), nil))
@@ -73,20 +76,20 @@ func prepareAndPersistGnt(tableName string, bookName string, words []gntWord) er
 		}
 		return results, nil
 	}
-	return partitionAndPersist(tableName, bookName, len(words), f)
+	return PartitionAndPersist(tableName, bookName, len(words), f)
 }
 
-func partitionAndPersist(tableName string, bookName string, size int, f saver) error {
-	partitionSize := getPartitionSize()
-	fmt.Printf("partition size: %d\n", partitionSize)
+func PartitionAndPersist(tableName string, bookName string, size int, f saver) error {
+	PartitionSize := getPartitionSize()
+	fmt.Printf("Partition size: %d\n", PartitionSize)
 	segmentNumber := 1
 	fmt.Printf("Saving %s (%d words)...\n", bookName, size)
-	for idxRange := range partition(size, partitionSize) {
+	for idxRange := range util.Partition(size, PartitionSize) {
 		err := persist(idxRange.Low, idxRange.High, f)
 		if err != nil {
 			return err
 		}
-		percent := (float64(segmentNumber) * float64((partitionSize)) / float64(size)) * 100
+		percent := (float64(segmentNumber) * float64((PartitionSize)) / float64(size)) * 100
 		if percent > 100 {
 			percent = 100
 		}
@@ -113,10 +116,10 @@ func persist(start int, end int, f saver) error {
 	return nil
 }
 
-func postPersistWLC(tableName string) error {
+func PostPersistWLC(tableName string) error {
 	return nil
 }
 
-func postPersistGNT(tableName string) error {
+func PostPersistGNT(tableName string) error {
 	return nil
 }

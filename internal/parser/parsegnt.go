@@ -1,4 +1,4 @@
-package main
+package parser
 
 import (
 	"bufio"
@@ -8,34 +8,14 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/davidbetz/morph/internal/models"
+	"github.com/davidbetz/morph/internal/util"
 )
 
 const (
 	bookOffset = 60
 )
-
-type gntMorphology struct {
-	Part   string `json:"part,omitempty"`
-	Person string `json:"person,omitempty"`
-	Tense  string `json:"tense,omitempty"`
-	Voice  string `json:"voice,omitempty"`
-	Mood   string `json:"mood,omitempty"`
-	Case   string `json:"case,omitempty"`
-	Number string `json:"number,omitempty"`
-	Gender string `json:"gender,omitempty"`
-	Degree string `json:"degree,omitempty"`
-}
-
-type gntWord struct {
-	Verse      string        `json:"verse"`
-	ID         int64         `json:"id"`
-	Codes      string        `json:"codes"`
-	Morphology gntMorphology `json:"morphology"`
-	Text       string        `json:"text"`
-	Word       string        `json:"word"`
-	Normalized string        `json:"normalized"`
-	Lemma      string        `json:"lemma"`
-}
 
 func (t *Gnt) getPartName(part string) string {
 	switch part {
@@ -66,12 +46,12 @@ func (t *Gnt) getPartName(part string) string {
 	case "X-":
 		return "particle"
 	default:
-		errorf("invalid part " + part)
+		util.Errorf("invalid part " + part)
 		return ""
 	}
 }
 
-func (t *Gnt) getMorphology(part string, code string) gntMorphology {
+func (t *Gnt) getMorphology(part string, code string) models.GntMorphology {
 	var person string
 	var tense string
 	var voice string
@@ -108,7 +88,7 @@ func (t *Gnt) getMorphology(part string, code string) gntMorphology {
 			break
 		}
 	}
-	return gntMorphology{
+	return models.GntMorphology{
 		Part:   t.getPartName(part),
 		Person: person,
 		Tense:  tense,
@@ -222,7 +202,7 @@ func (t *Gnt) setupTables() {
 func (t *Gnt) createAbsoluteID(verse string, id int) int64 {
 	newID, err := strconv.ParseInt(verse+strconv.Itoa(id), 10, 32)
 	if err != nil {
-		errorf(err.Error())
+		util.Errorf(err.Error())
 	}
 	return newID
 }
@@ -231,12 +211,16 @@ func (t *Gnt) readFile(filename string) ([][]string, error) {
 	if filepath.Ext(filename) != ".txt" {
 		return nil, errors.New("Skip")
 	}
-	debug(fmt.Sprintf("PARSING: %v\n", filename))
+	util.Debug(fmt.Sprintf("PARSING: %v\n", filename))
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error closing file: %v\n", err)
+		}
+	}()
 	var lines [][]string
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -245,8 +229,8 @@ func (t *Gnt) readFile(filename string) ([][]string, error) {
 	return lines, nil
 }
 
-func (t *Gnt) ParseFileContent(filename string) ([]gntWord, error) {
-	words := []gntWord{}
+func (t *Gnt) ParseFileContent(filename string) ([]models.GntWord, error) {
+	words := []models.GntWord{}
 	lines, err := t.readFile(filename)
 	if err != nil {
 		return nil, err
@@ -261,7 +245,7 @@ func (t *Gnt) ParseFileContent(filename string) ([]gntWord, error) {
 		bookNumber, _ := strconv.ParseInt(originalVerse[0:2], 10, 32)
 		verse := strconv.Itoa(int(bookNumber)+39) + originalVerse[2:4] + originalVerse[4:6]
 		uniqueID := t.createAbsoluteID(verse, id)
-		words = append(words, gntWord{
+		words = append(words, models.GntWord{
 			ID:         uniqueID,
 			Verse:      verse,
 			Codes:      parts[2],

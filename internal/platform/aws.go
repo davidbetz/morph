@@ -1,6 +1,7 @@
+//go:build aws
 // +build aws
 
-package main
+package platform
 
 import (
 	"encoding/json"
@@ -10,6 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/davidbetz/morph/internal/models"
+	"github.com/davidbetz/morph/internal/util"
 )
 
 func getPartitionSize() int {
@@ -19,7 +22,7 @@ func getPartitionSize() int {
 func createSession() (*session.Session, error) {
 	session, err := session.NewSession()
 	if err != nil {
-		errorf(err.Error())
+		util.Errorf(err.Error())
 	}
 	return session, err
 }
@@ -45,36 +48,36 @@ func unifiedPersist(tableName string, bookName string, words []interface{}) erro
 			},
 		}
 	}
-	return partitionAndPersist(tableName, bookName, prepared)
+	return PartitionAndPersist(tableName, bookName, prepared)
 }
 
-func prepareAndPersistWlc(tableName string, bookName string, words []wlcWord) error {
+func PrepareAndPersistWlc(tableName string, bookName string, words []models.WlcWord) error {
 	var taco []interface{}
 	m, _ := json.Marshal(words)
 	json.Unmarshal(m, &taco)
 	return unifiedPersist(tableName, bookName, taco)
 }
 
-func prepareAndPersistGnt(tableName string, bookName string, words []gntWord) error {
+func PrepareAndPersistGnt(tableName string, bookName string, words []models.GntWord) error {
 	var taco []interface{}
 	m, _ := json.Marshal(words)
 	json.Unmarshal(m, &taco)
 	return unifiedPersist(tableName, bookName, taco)
 }
 
-func partitionAndPersist(tableName string, bookName string, prepared []*dynamodb.WriteRequest) error {
-	partitionSize := getPartitionSize()
-	fmt.Printf("partition size: %d\n", partitionSize)
+func PartitionAndPersist(tableName string, bookName string, prepared []*dynamodb.WriteRequest) error {
+	PartitionSize := getPartitionSize()
+	fmt.Printf("Partition size: %d\n", PartitionSize)
 	segmentNumber := 1
 	fmt.Printf("Saving %s (%d words)...\n", bookName, len(prepared))
-	for idxRange := range partition(len(prepared), partitionSize) {
-		// fmt.Printf("partition: %d %d %d\n", idxRange.Low, idxRange.High, idxRange.High-idxRange.Low)
+	for idxRange := range util.Partition(len(prepared), PartitionSize) {
+		// fmt.Printf("Partition: %d %d %d\n", idxRange.Low, idxRange.High, idxRange.High-idxRange.Low)
 		segment := prepared[idxRange.Low:idxRange.High]
 		err := persist(tableName, segment)
 		if err != nil {
 			return err
 		}
-		percent := (float64(segmentNumber) * float64((partitionSize)) / float64(len(prepared))) * 100
+		percent := (float64(segmentNumber) * float64((PartitionSize)) / float64(len(prepared))) * 100
 		if percent > 100 {
 			percent = 100
 		}
@@ -84,7 +87,7 @@ func partitionAndPersist(tableName string, bookName string, prepared []*dynamodb
 	return nil
 }
 
-func validateCloudConfig() error {
+func ValidateCloudConfig() error {
 	return nil
 }
 
@@ -121,10 +124,10 @@ func persist(tableName string, items []*dynamodb.WriteRequest) error {
 	return nil
 }
 
-func postPersistWLC(tableName string) error {
+func PostPersistWLC(tableName string) error {
 	return nil
 }
 
-func postPersistGNT(tableName string) error {
+func PostPersistGNT(tableName string) error {
 	return nil
 }

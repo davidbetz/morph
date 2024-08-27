@@ -1,11 +1,11 @@
-package main
+package util
 
 import (
 	"fmt"
 	"os"
 )
 
-func errorf(format string, args ...interface{}) {
+func Errorf(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format+"\n", args...)
 	os.Exit(2)
 }
