@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/davidbetz/morph/internal/macula"
+	"github.com/davidbetz/morph/internal/models"
 	"github.com/davidbetz/morph/internal/parser"
 	"github.com/davidbetz/morph/internal/targets"
 	"github.com/davidbetz/morph/internal/util"
@@ -15,8 +17,7 @@ var verbose bool
 func main() {
 	verbose, _ = strconv.ParseBool(os.Getenv("VERBOSE"))
 	platformPtr := flag.String("target", "", "text|jsonl|aws|gcp|azure|mssql")
-	modePtr := flag.String("mode", "", "gnt|wlc|strongs")
-	stylePtr := flag.String("style", "", "english|hebrew")
+	modePtr := flag.String("mode", "", "gnt|wlc")
 	flag.Parse()
 	mode := *modePtr
 	if len(mode) == 0 {
@@ -31,8 +32,13 @@ func main() {
 	if err != nil {
 		util.Errorf(err.Error())
 	}
-	activeParser := parser.Create(mode, *stylePtr)
-	err = activeParser.Process(targets)
+	var activeParser models.Parser
+	if mode == "gnt" {
+		activeParser = parser.CreateGnt()
+	} else if mode == "wlc" {
+		activeParser = macula.CreateHebrewParser()
+	}
+	err = activeParser.Count(targets)
 	if err != nil {
 		util.Errorf(err.Error())
 	}

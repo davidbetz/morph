@@ -15,7 +15,7 @@ var verbose bool
 func main() {
 	verbose, _ = strconv.ParseBool(os.Getenv("VERBOSE"))
 	platformPtr := flag.String("target", "", "text|jsonl|aws|gcp|azure|mssql")
-	modePtr := flag.String("mode", "", "gnt|wlc|strongs")
+	modePtr := flag.String("mode", "", "gnt|wlc")
 	stylePtr := flag.String("style", "", "english|hebrew")
 	flag.Parse()
 	mode := *modePtr

@@ -11,10 +11,7 @@ import (
 
 	"github.com/davidbetz/morph/internal/models"
 	"github.com/davidbetz/morph/internal/util"
-)
-
-const (
-	bookOffset = 60
+	"golang.org/x/text/unicode/norm"
 )
 
 func (t *Gnt) getPartName(part string) string {
@@ -64,28 +61,20 @@ func (t *Gnt) getMorphology(part string, code string) models.GntMorphology {
 		switch i {
 		case 0:
 			person = t.personLookup[value]
-			break
 		case 1:
 			tense = t.tenseLookup[value]
-			break
 		case 2:
 			voice = t.voiceLookup[value]
-			break
 		case 3:
 			mood = t.moodLookup[value]
-			break
 		case 4:
 			_case = t.caseLookup[value]
-			break
 		case 5:
 			number = t.numberLookup[value]
-			break
 		case 6:
 			gender = t.genderLookup[value]
-			break
 		case 7:
 			degree = t.degreeLookup[value]
-			break
 		}
 	}
 	return models.GntMorphology{
@@ -246,14 +235,15 @@ func (t *Gnt) ParseFileContent(filename string) ([]models.GntWord, error) {
 		verse := strconv.Itoa(int(bookNumber)+39) + originalVerse[2:4] + originalVerse[4:6]
 		uniqueID := t.createAbsoluteID(verse, id)
 		words = append(words, models.GntWord{
-			ID:         uniqueID,
-			Verse:      verse,
-			Codes:      parts[2],
-			Morphology: t.getMorphology(parts[1], parts[2]),
-			Text:       parts[3],
-			Word:       parts[4],
-			Normalized: parts[5],
-			Lemma:      parts[6],
+			ID:              uniqueID,
+			Verse:           verse,
+			Codes:           parts[2],
+			Morphology:      t.getMorphology(parts[1], parts[2]),
+			Text:            parts[3],
+			Word:            parts[4],
+			Normalized:      parts[5],
+			Lemma:           parts[6],
+			NormalizedLemma: norm.NFC.String(strings.ToLower(parts[6])),
 		})
 		id++
 	}

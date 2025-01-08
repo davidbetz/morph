@@ -404,10 +404,8 @@ func (t *Wlc) parseMorphology(morph string) (string, []map[string]string) {
 	switch languageCode {
 	case "H":
 		language = "Hebrew"
-		break
 	case "A":
 		language = "Aramaic"
-		break
 	}
 	util.Debug(fmt.Sprintf("STARTING NEXT WORD %s %s\n", original, language))
 	var morphologyArray []map[string]string
@@ -433,7 +431,7 @@ func (t *Wlc) parseMorphology(morph string) (string, []map[string]string) {
 		util.Debug(fmt.Sprintf("\tSTARTING NEXT PART, %s %s\n", original, tree.Name))
 		for _, l := range part {
 			letter := string(l)
-			util.Debug(fmt.Sprintf("\t\tSTARTING NEXT LETTER, %s %q\n", letter, tree))
+			util.Debug(fmt.Sprintf("\t\tSTARTING NEXT LETTER, %s %v\n", letter, tree))
 			if tree.Name != "-" {
 				m[tree.Name] = tree.Lookup[letter]
 			}

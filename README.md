@@ -14,8 +14,8 @@ The [morphhb](https://github.com/openscriptures/morphhb) text isn't usable direc
 
 Test the local setup with the following:
 
-    make linux-print && ./morph-print -mode gnt
-    make linux-print && ./morph-print -mode wlc
+    make morph
+    make morph-wlc
 
 For all following examples, `-mode` can be `gnt` or `wlc`.
 
@@ -29,8 +29,8 @@ Use `SOURCE` to manually specify the root folder of the GNT and WLC files.
 
 Windows is also supported:
 
-    make windows-print
-    morph-print.exe -mode gnt
+    make windows
+    morph.exe -mode gnt
 
 ## Ephemeral VM Setup
 
@@ -74,7 +74,7 @@ Client VM only requires `dynamodb:BatchWriteItem`
 
 Run with:
 
-    make linux-aws && AWS_REGION=<REGION> ./morph-aws -mode gnt
+    make linux && AWS_REGION=<REGION> ./morph -mode gnt -target aws
 
 You can set the region in other standard ways too.
 
@@ -85,7 +85,7 @@ Create a storage account with `morphtgnt` table. Create a connection string (not
 
 Run with:
 
-    make linux-azure && CS=<CS_STRING> ./morph-azure -mode gnt
+    make linux && CS=<CS_STRING> ./morph -mode gnt -target azure
 
 ## GCP
 
@@ -95,7 +95,7 @@ Client VM only requires `Cloud Datastore User`
 
 Run with:
 
-    make linux-gcp && PROJECT_ID=<PROJECT_ID> ./morph-gcp -mode gnt
+    make linux && PROJECT_ID=<PROJECT_ID> ./morph -mode gnt -target gcp
 
 ## Microsoft SQL Server
 
@@ -114,6 +114,6 @@ See [https://www.connectionstrings.com/sql-server/](https://www.connectionstring
 Run with (set CS):
 
     export MSSQL_CS='Server=SERVER_NAME;Database=morph;User Id=sa;Password=PASSWORD'
-    make linux-mssql && CS=$MSSQL_CS ./morph-mssql -mode gnt
+    make linux && CS=$MSSQL_CS ./morph -mode gnt -target mssql
 
 `sa` is fine for local playing around.

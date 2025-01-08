@@ -1,7 +1,4 @@
-//go:build aws
-// +build aws
-
-package platform
+package targets
 
 import (
 	"encoding/json"
@@ -15,11 +12,18 @@ import (
 	"github.com/davidbetz/morph/internal/util"
 )
 
-func getPartitionSize() int {
+type Aws struct {
+}
+
+func CreateAws() *Aws {
+	return &Aws{}
+}
+
+func (t *Aws) getPartitionSize() int {
 	return 25
 }
 
-func createSession() (*session.Session, error) {
+func (t *Aws) createSession() (*session.Session, error) {
 	session, err := session.NewSession()
 	if err != nil {
 		util.Errorf(err.Error())
@@ -27,7 +31,7 @@ func createSession() (*session.Session, error) {
 	return session, err
 }
 
-func createAttributeValue(word interface{}) (map[string]*dynamodb.AttributeValue, error) {
+func (t *Aws) createAttributeValue(word interface{}) (map[string]*dynamodb.AttributeValue, error) {
 	av, err := dynamodbattribute.MarshalMap(word)
 	if err != nil {
 		return nil, fmt.Errorf("MarshalMap error %s", err.Error())
@@ -35,10 +39,10 @@ func createAttributeValue(word interface{}) (map[string]*dynamodb.AttributeValue
 	return av, nil
 }
 
-func unifiedPersist(tableName string, bookName string, words []interface{}) error {
+func (t *Aws) unifiedPersist(tableName string, bookName string, words []interface{}) error {
 	prepared := make([]*dynamodb.WriteRequest, len(words))
 	for i, word := range words {
-		av, err := createAttributeValue(word)
+		av, err := t.createAttributeValue(word)
 		if err != nil {
 			return err
 		}
@@ -48,32 +52,38 @@ func unifiedPersist(tableName string, bookName string, words []interface{}) erro
 			},
 		}
 	}
-	return PartitionAndPersist(tableName, bookName, prepared)
+	return t.PartitionAndPersist(tableName, bookName, prepared)
 }
 
-func PrepareAndPersistWlc(tableName string, bookName string, words []models.WlcWord) error {
+func (t *Aws) PrepareAndPersistWlc(tableName string, bookName string, words []models.WlcWord) error {
 	var taco []interface{}
 	m, _ := json.Marshal(words)
-	json.Unmarshal(m, &taco)
-	return unifiedPersist(tableName, bookName, taco)
+	err := json.Unmarshal(m, &taco)
+	if err != nil {
+		return err
+	}
+	return t.unifiedPersist(tableName, bookName, taco)
 }
 
-func PrepareAndPersistGnt(tableName string, bookName string, words []models.GntWord) error {
+func (t *Aws) PrepareAndPersistGnt(tableName string, bookName string, words []models.GntWord) error {
 	var taco []interface{}
 	m, _ := json.Marshal(words)
-	json.Unmarshal(m, &taco)
-	return unifiedPersist(tableName, bookName, taco)
+	err := json.Unmarshal(m, &taco)
+	if err != nil {
+		return err
+	}
+	return t.unifiedPersist(tableName, bookName, taco)
 }
 
-func PartitionAndPersist(tableName string, bookName string, prepared []*dynamodb.WriteRequest) error {
-	PartitionSize := getPartitionSize()
+func (t *Aws) PartitionAndPersist(tableName string, bookName string, prepared []*dynamodb.WriteRequest) error {
+	PartitionSize := t.getPartitionSize()
 	fmt.Printf("Partition size: %d\n", PartitionSize)
 	segmentNumber := 1
 	fmt.Printf("Saving %s (%d words)...\n", bookName, len(prepared))
 	for idxRange := range util.Partition(len(prepared), PartitionSize) {
 		// fmt.Printf("Partition: %d %d %d\n", idxRange.Low, idxRange.High, idxRange.High-idxRange.Low)
 		segment := prepared[idxRange.Low:idxRange.High]
-		err := persist(tableName, segment)
+		err := t.persist(tableName, segment)
 		if err != nil {
 			return err
 		}
@@ -87,12 +97,12 @@ func PartitionAndPersist(tableName string, bookName string, prepared []*dynamodb
 	return nil
 }
 
-func ValidateCloudConfig() error {
+func (t *Aws) ValidateCloudConfig() error {
 	return nil
 }
 
-func persist(tableName string, items []*dynamodb.WriteRequest) error {
-	sess, err := createSession()
+func (t *Aws) persist(tableName string, items []*dynamodb.WriteRequest) error {
+	sess, err := t.createSession()
 	if err != nil {
 		return fmt.Errorf("NewSession error %s", err.Error())
 	}
@@ -124,10 +134,26 @@ func persist(tableName string, items []*dynamodb.WriteRequest) error {
 	return nil
 }
 
-func PostPersistWLC(tableName string) error {
+func (t *Aws) PostPersistWLC(tableName string) error {
 	return nil
 }
 
-func PostPersistGNT(tableName string) error {
+func (t *Aws) PostPersistGNT(tableName string) error {
 	return nil
+}
+
+func (t *Aws) PersistCounts(bookName string, buckets map[int]map[string]models.WordCount) error {
+	return nil
+}
+
+func (t *Aws) PersistRender(bookName string, words []string) error {
+	return nil
+}
+
+func (t *Aws) PersistStrongs(PersistStrongs string, data []models.Lemma) error {
+	return models.NewNotImplementedError("PersistStrongs")
+}
+
+func (t *Aws) PersistMacula(language string, data []models.MaculaWord) error {
+	return models.NewNotImplementedError("PersistMacula")
 }

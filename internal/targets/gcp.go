@@ -1,7 +1,4 @@
-//go:build gcp
-// +build gcp
-
-package platform
+package targets
 
 import (
 	"context"
@@ -13,6 +10,13 @@ import (
 	"github.com/davidbetz/morph/internal/models"
 	"github.com/davidbetz/morph/internal/util"
 )
+
+type Gcp struct {
+}
+
+func CreateGcp() *Gcp {
+	return &Gcp{}
+}
 
 type wlcWordDataStoreEntity struct {
 	Codes      string `datastore:"codes"`
@@ -26,11 +30,11 @@ type wlcWordDataStoreEntity struct {
 
 type saver func(context.Context, int, int, *datastore.Client) ([]*datastore.Key, error)
 
-func getPartitionSize() int {
+func (t *Gcp) getPartitionSize() int {
 	return 200
 }
 
-func ValidateCloudConfig() error {
+func (t *Gcp) ValidateCloudConfig() error {
 	projectID := os.Getenv("PROJECT_ID")
 	if len(projectID) == 0 {
 		return errors.New("PROJECT_ID is required.")
@@ -38,7 +42,7 @@ func ValidateCloudConfig() error {
 	return nil
 }
 
-func PrepareAndPersistWlc(tableName string, bookName string, words []models.WlcWord) error {
+func (t *Gcp) PrepareAndPersistWlc(tableName string, bookName string, words []models.WlcWord) error {
 	var keys []*datastore.Key
 	var prepared []wlcWordDataStoreEntity
 	for _, word := range words {
@@ -61,10 +65,10 @@ func PrepareAndPersistWlc(tableName string, bookName string, words []models.WlcW
 		}
 		return results, nil
 	}
-	return PartitionAndPersist(tableName, bookName, len(prepared), f)
+	return t.PartitionAndPersist(tableName, bookName, len(prepared), f)
 }
 
-func PrepareAndPersistGnt(tableName string, bookName string, words []models.GntWord) error {
+func (t *Gcp) PrepareAndPersistGnt(tableName string, bookName string, words []models.GntWord) error {
 	var keys []*datastore.Key
 	for _, key := range words {
 		keys = append(keys, datastore.NameKey(tableName, fmt.Sprintf("%d", key.ID), nil))
@@ -76,16 +80,16 @@ func PrepareAndPersistGnt(tableName string, bookName string, words []models.GntW
 		}
 		return results, nil
 	}
-	return PartitionAndPersist(tableName, bookName, len(words), f)
+	return t.PartitionAndPersist(tableName, bookName, len(words), f)
 }
 
-func PartitionAndPersist(tableName string, bookName string, size int, f saver) error {
-	PartitionSize := getPartitionSize()
+func (t *Gcp) PartitionAndPersist(tableName string, bookName string, size int, f saver) error {
+	PartitionSize := t.getPartitionSize()
 	fmt.Printf("Partition size: %d\n", PartitionSize)
 	segmentNumber := 1
 	fmt.Printf("Saving %s (%d words)...\n", bookName, size)
 	for idxRange := range util.Partition(size, PartitionSize) {
-		err := persist(idxRange.Low, idxRange.High, f)
+		err := t.persist(idxRange.Low, idxRange.High, f)
 		if err != nil {
 			return err
 		}
@@ -99,7 +103,7 @@ func PartitionAndPersist(tableName string, bookName string, size int, f saver) e
 	return nil
 }
 
-func persist(start int, end int, f saver) error {
+func (t *Gcp) persist(start int, end int, f saver) error {
 	ctx := context.Background()
 	projectID := os.Getenv("PROJECT_ID")
 	client, err := datastore.NewClient(ctx, projectID)
@@ -116,10 +120,26 @@ func persist(start int, end int, f saver) error {
 	return nil
 }
 
-func PostPersistWLC(tableName string) error {
+func (t *Gcp) PostPersistWLC(tableName string) error {
 	return nil
 }
 
-func PostPersistGNT(tableName string) error {
+func (t *Gcp) PostPersistGNT(tableName string) error {
 	return nil
+}
+
+func (t *Gcp) PersistCounts(bookName string, buckets map[int]map[string]models.WordCount) error {
+	return nil
+}
+
+func (t *Gcp) PersistRender(bookName string, words []string) error {
+	return nil
+}
+
+func (t *Gcp) PersistStrongs(PersistStrongs string, data []models.Lemma) error {
+	return models.NewNotImplementedError("PersistStrongs")
+}
+
+func (t *Gcp) PersistMacula(language string, data []models.MaculaWord) error {
+	return models.NewNotImplementedError("PersistMacula")
 }

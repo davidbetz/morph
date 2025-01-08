@@ -1,7 +1,4 @@
-//go:build azure
-// +build azure
-
-package platform
+package targets
 
 //+ https://github.com/Azure/azure-sdk-for-go/blob/77258e94d84ea36012a72c0e0a1e2faa409c6396/storage/entity_test.go
 
@@ -16,13 +13,20 @@ import (
 	"github.com/davidbetz/morph/internal/util"
 )
 
+type Azure struct {
+}
+
+func CreateAzure() *Azure {
+	return &Azure{}
+}
+
 type azureWord struct {
 	PartitionKey string
 	RowKey       string
 	Properties   map[string]interface{}
 }
 
-func getTableReference(tableName string) *storage.Table {
+func (t *Azure) getTableReference(tableName string) *storage.Table {
 	cs := os.Getenv("CS")
 	client, err := storage.NewClientFromConnectionString(cs)
 	if err != nil {
@@ -32,11 +36,11 @@ func getTableReference(tableName string) *storage.Table {
 	return tableService.GetTableReference(tableName)
 }
 
-func getPartitionSize() int {
+func (t *Azure) getPartitionSize() int {
 	return 1000
 }
 
-func ValidateCloudConfig() error {
+func (t *Azure) ValidateCloudConfig() error {
 	cs := os.Getenv("CS")
 	if len(cs) == 0 {
 		return errors.New("CS is required.")
@@ -44,7 +48,7 @@ func ValidateCloudConfig() error {
 	return nil
 }
 
-func PrepareAndPersistWlc(tableName string, bookName string, words []models.WlcWord) error {
+func (t *Azure) PrepareAndPersistWlc(tableName string, bookName string, words []models.WlcWord) error {
 	var prepared []azureWord
 	for _, word := range words {
 		preparedProperties := map[string]interface{}{
@@ -61,10 +65,10 @@ func PrepareAndPersistWlc(tableName string, bookName string, words []models.WlcW
 			Properties:   preparedProperties,
 		})
 	}
-	return PartitionAndPersist(tableName, bookName, prepared)
+	return t.PartitionAndPersist(tableName, bookName, prepared)
 }
 
-func PrepareAndPersistGnt(tableName string, bookName string, words []models.GntWord) error {
+func (t *Azure) PrepareAndPersistGnt(tableName string, bookName string, words []models.GntWord) error {
 	var prepared []azureWord
 	for _, word := range words {
 		prepared = append(prepared, azureWord{
@@ -88,17 +92,17 @@ func PrepareAndPersistGnt(tableName string, bookName string, words []models.GntW
 			},
 		})
 	}
-	return PartitionAndPersist(tableName, bookName, prepared)
+	return t.PartitionAndPersist(tableName, bookName, prepared)
 }
 
-func PartitionAndPersist(tableName string, bookName string, prepared []azureWord) error {
-	PartitionSize := getPartitionSize()
+func (t *Azure) PartitionAndPersist(tableName string, bookName string, prepared []azureWord) error {
+	PartitionSize := t.getPartitionSize()
 	fmt.Printf("Partition size: %d\n", PartitionSize)
 	segmentNumber := 1
 	fmt.Printf("Saving %s (%d words)...\n", bookName, len(prepared))
 	for idxRange := range util.Partition(len(prepared), PartitionSize) {
 		segment := prepared[idxRange.Low:idxRange.High]
-		err := persist(tableName, segment)
+		err := t.persist(tableName, segment)
 		if err != nil {
 			return err
 		}
@@ -112,9 +116,9 @@ func PartitionAndPersist(tableName string, bookName string, prepared []azureWord
 	return nil
 }
 
-func persist(tableName string, segment []azureWord) error {
+func (t *Azure) persist(tableName string, segment []azureWord) error {
 	for _, word := range segment {
-		table := getTableReference(tableName)
+		table := t.getTableReference(tableName)
 		entity := table.GetEntityReference(word.PartitionKey, word.RowKey)
 		entity.Properties = word.Properties
 		err := entity.InsertOrReplace(nil)
@@ -125,10 +129,26 @@ func persist(tableName string, segment []azureWord) error {
 	return nil
 }
 
-func PostPersistWLC(tableName string) error {
+func (t *Azure) PostPersistWLC(tableName string) error {
 	return nil
 }
 
-func PostPersistGNT(tableName string) error {
+func (t *Azure) PostPersistGNT(tableName string) error {
 	return nil
+}
+
+func (t *Azure) PersistCounts(bookName string, buckets map[int]map[string]models.WordCount) error {
+	return nil
+}
+
+func (t *Azure) PersistRender(bookName string, words []string) error {
+	return nil
+}
+
+func (t *Azure) PersistStrongs(PersistStrongs string, data []models.Lemma) error {
+	return models.NewNotImplementedError("PersistStrongs")
+}
+
+func (t *Azure) PersistMacula(language string, data []models.MaculaWord) error {
+	return models.NewNotImplementedError("PersistMacula")
 }

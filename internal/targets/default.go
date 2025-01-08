@@ -1,7 +1,4 @@
-//go:build !json && !aws && !azure && !gcp && !mssql && !print
-// +build !json,!aws,!azure,!gcp,!mssql,!print
-
-package platform
+package targets
 
 import (
 	"errors"

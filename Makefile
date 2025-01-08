@@ -14,74 +14,61 @@ GORUN=$(GOCMD) run
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 APP_NAME=morph
-BINARY_LINUX=$(APP_NAME)-cli_linux
-BINARY_WINDOWS=$(APP_NAME)-cli.exe
-UI_DIR=./ui
 
 .PHONY:
 
 build:
-	go build -tags json ./...
+	go build ./...
 
-all: print json aws azure gcp mssql
+errcheck:
+	errcheck ./...
 
-linux: linux-print linux-json linux-aws linux-azure linux-gcp linux-mssql
+morph-gnt:
+	$(GORUN) ./cmd/morph -mode gnt -target jsonl
 
-windows: windows-print windows-json windows-aws windows-azure windows-gcp windows-mssql
+morph-wlc:
+	$(GORUN) ./cmd/morph -mode wlc -style english -target jsonl
 
-print:
-	GOOS=linux $(GOBUILD) -tags print ./cmd/$(APP_NAME)
+render-gnt:
+	$(GORUN) ./cmd/render -mode gnt -target text
 
-json:
-	GOOS=linux $(GOBUILD) -tags json ./cmd/$(APP_NAME)
+render-wlc:
+	$(GORUN) ./cmd/render -mode wlc -style english -target text
 
-aws:
-	GOOS=linux $(GOBUILD) -tags aws ./cmd/$(APP_NAME)
+counts-gnt:
+	$(GORUN) ./cmd/counts -mode gnt -target text
 
-azure:
-	GOOS=linux $(GOBUILD) -tags azure ./cmd/$(APP_NAME)
+counts-wlc:
+	$(GORUN) ./cmd/counts -mode wlc -style english -target text
 
-gcp:
-	GOOS=linux $(GOBUILD) -tags gcp ./cmd/$(APP_NAME)
+counts-gnt-jsonl:
+	$(GORUN) ./cmd/counts -mode gnt -target jsonl
 
-mssql:
-	GOOS=linux $(GOBUILD) -tags mssql ./cmd/$(APP_NAME)
+counts-wlc-jsonl:
+	$(GORUN) ./cmd/counts -mode wlc -target jsonl
 
-linux-print:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -installsuffix cgo -v -ldflags '-w -s' -tags print -o $(APP_NAME)-print ./cmd/$(APP_NAME)
+strongs-greek-gob:
+	$(GORUN) ./cmd/morph -mode strongs-greek -target gob
 
-linux-json:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -installsuffix cgo -v -ldflags '-w -s' -tags json -o $(APP_NAME)-json ./cmd/$(APP_NAME)
+strongs-greek:
+	$(GORUN) ./cmd/morph -mode strongs-greek -target text
 
-linux-aws:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -installsuffix cgo -v -ldflags '-w -s' -tags aws -o $(APP_NAME)-aws ./cmd/$(APP_NAME)
+strongs-hebrew-gob:
+	$(GORUN) ./cmd/morph -mode strongs-hebrew -target gob
 
-linux-azure:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -installsuffix cgo -v -ldflags '-w -s' -tags azure -o $(APP_NAME)-azure ./cmd/$(APP_NAME)
+strongs-hebrew:
+	$(GORUN) ./cmd/morph -mode strongs-hebrew -target text
 
-linux-gcp:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -installsuffix cgo -v -ldflags '-w -s' -tags gcp -o $(APP_NAME)-gcp ./cmd/$(APP_NAME)
+macula-hebrew-jsonl:
+	$(GORUN) ./cmd/morph -mode macula-hebrew -target jsonl
 
-linux-mssql:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -installsuffix cgo -v -ldflags '-w -s' -tags mssql -o $(APP_NAME)-mssql ./cmd/$(APP_NAME)
+linux:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -installsuffix cgo -v -ldflags '-w -s' -o $(APP_NAME)-linux ./cmd/$(APP_NAME)
 
-windows-print:
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GOBUILD) -installsuffix cgo -v -ldflags '-w -s' -tags print -o $(APP_NAME)-print.exe ./cmd/$(APP_NAME)
-
-windows-json:
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GOBUILD) -installsuffix cgo -v -ldflags '-w -s' -tags json -o $(APP_NAME)-json.exe ./cmd/$(APP_NAME)
-
-windows-aws:
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GOBUILD) -installsuffix cgo -v -ldflags '-w -s' -tags aws -o $(APP_NAME)-aws.exe ./cmd/$(APP_NAME)
-
-windows-azure:
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GOBUILD) -installsuffix cgo -v -ldflags '-w -s' -tags azure -o $(APP_NAME)-azure.exe ./cmd/$(APP_NAME)
-
-windows-gcp:
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GOBUILD) -installsuffix cgo -v -ldflags '-w -s' -tags gcp -o $(APP_NAME)-gcp.exe ./cmd/$(APP_NAME)
-
-windows-mssql:
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GOBUILD) -installsuffix cgo -v -ldflags '-w -s' -tags mssql -o $(APP_NAME)-mssql.exe ./cmd/$(APP_NAME)
+windows:
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GOBUILD) -installsuffix cgo -v -ldflags '-w -s' -o $(APP_NAME).exe ./cmd/$(APP_NAME)
 
 clean:
-	rm morph-* main
+	rm -rf output/
+	rm -f $(APP_NAME)-linux
+	rm -f $(APP_NAME).exe

@@ -1,7 +1,4 @@
-//go:build mssql
-// +build mssql
-
-package platform
+package targets
 
 import (
 	"database/sql"
@@ -78,12 +75,18 @@ const (
 	`
 )
 
+type MsSql struct{}
+
+func CreateMsSql() *MsSql {
+	return &MsSql{}
+}
+
 type mssqlWord struct {
 	ID   int64
 	Data string
 }
 
-func createConnection() (*sql.DB, error) {
+func (t *MsSql) createConnection() (*sql.DB, error) {
 	cs := os.Getenv("CS")
 	connection, err := sql.Open("mssql", cs)
 	if err != nil {
@@ -92,11 +95,11 @@ func createConnection() (*sql.DB, error) {
 	return connection, nil
 }
 
-func getPartitionSize() int {
+func (t *MsSql) getPartitionSize() int {
 	return 1000
 }
 
-func ValidateCloudConfig() error {
+func (t *MsSql) ValidateCloudConfig() error {
 	cs := os.Getenv("CS")
 	if len(cs) == 0 {
 		return errors.New("CS is required")
@@ -104,12 +107,16 @@ func ValidateCloudConfig() error {
 	return nil
 }
 
-func PostPersistWLC(tableName string) error {
-	db, err := createConnection()
+func (t *MsSql) PostPersistWLC(tableName string) error {
+	db, err := t.createConnection()
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func() {
+		if cerr := db.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 	sql := strings.Replace(createWLCIndexes, "{{ TABLE_NAME }}", tableName, -1)
 	_, err = db.Exec(sql)
 	if err != nil {
@@ -118,12 +125,16 @@ func PostPersistWLC(tableName string) error {
 	return nil
 }
 
-func PostPersistGNT(tableName string) error {
-	db, err := createConnection()
+func (t *MsSql) PostPersistGNT(tableName string) error {
+	db, err := t.createConnection()
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func() {
+		if cerr := db.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 	sql := strings.Replace(createGNTIndexes, "{{ TABLE_NAME }}", tableName, -1)
 	fmt.Println(sql)
 	_, err = db.Exec(sql)
@@ -133,12 +144,16 @@ func PostPersistGNT(tableName string) error {
 	return nil
 }
 
-func PrepareAndPersistWlc(tableName string, bookName string, words []models.WlcWord) error {
-	db, err := createConnection()
+func (t *MsSql) PrepareAndPersistWlc(tableName string, bookName string, words []models.WlcWord) error {
+	db, err := t.createConnection()
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func() {
+		if cerr := db.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 	sql := strings.Replace(createWLCTable, "{{ TABLE_NAME }}", tableName, -1)
 	_, err = db.Exec(sql)
 	if err != nil {
@@ -152,15 +167,19 @@ func PrepareAndPersistWlc(tableName string, bookName string, words []models.WlcW
 			Data: string(m),
 		})
 	}
-	return PartitionAndPersist(db, tableName, bookName, prepared)
+	return t.PartitionAndPersist(db, tableName, bookName, prepared)
 }
 
-func PrepareAndPersistGnt(tableName string, bookName string, words []models.GntWord) error {
-	db, err := createConnection()
+func (t *MsSql) PrepareAndPersistGnt(tableName string, bookName string, words []models.GntWord) error {
+	db, err := t.createConnection()
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func() {
+		if cerr := db.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 	sql := strings.Replace(createGNTTable, "{{ TABLE_NAME }}", tableName, -1)
 	_, err = db.Exec(sql)
 	if err != nil {
@@ -174,18 +193,18 @@ func PrepareAndPersistGnt(tableName string, bookName string, words []models.GntW
 			Data: string(m),
 		})
 	}
-	return PartitionAndPersist(db, tableName, bookName, prepared)
+	return t.PartitionAndPersist(db, tableName, bookName, prepared)
 }
 
-func PartitionAndPersist(db *sql.DB, tableName string, bookName string, prepared []mssqlWord) error {
-	PartitionSize := getPartitionSize()
+func (t *MsSql) PartitionAndPersist(db *sql.DB, tableName string, bookName string, prepared []mssqlWord) error {
+	PartitionSize := t.getPartitionSize()
 	fmt.Printf("Partition size: %d\n", PartitionSize)
 	segmentNumber := 1
 	fmt.Printf("Saving %s (%d words)...\n", bookName, len(prepared))
 	for idxRange := range util.Partition(len(prepared), PartitionSize) {
 		// fmt.Printf("Partition: %d %d %d\n", idxRange.Low, idxRange.High, idxRange.High-idxRange.Low)
 		segment := prepared[idxRange.Low:idxRange.High]
-		err := persist(db, tableName, segment)
+		err := t.persist(db, tableName, segment)
 		if err != nil {
 			return err
 		}
@@ -199,7 +218,7 @@ func PartitionAndPersist(db *sql.DB, tableName string, bookName string, prepared
 	return nil
 }
 
-func persist(db *sql.DB, tableName string, segment []mssqlWord) error {
+func (t *MsSql) persist(db *sql.DB, tableName string, segment []mssqlWord) error {
 	txn, err := db.Begin()
 	if err != nil {
 		return err
@@ -232,4 +251,20 @@ func persist(db *sql.DB, tableName string, segment []mssqlWord) error {
 		return err
 	}
 	return nil
+}
+
+func (t *MsSql) PersistCounts(bookName string, buckets map[int]map[string]models.WordCount) error {
+	return nil
+}
+
+func (t *MsSql) PersistRender(bookName string, words []string) error {
+	return nil
+}
+
+func (t *MsSql) PersistStrongs(PersistStrongs string, data []models.Lemma) error {
+	return models.NewNotImplementedError("PersistStrongs")
+}
+
+func (t *MsSql) PersistMacula(language string, data []models.MaculaWord) error {
+	return models.NewNotImplementedError("PersistMacula")
 }
